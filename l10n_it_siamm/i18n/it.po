@@ -1,0 +1,83 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_it_siamm
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 8.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-11-26 20:00+0000\n"
+"PO-Revision-Date: 2014-11-26 21:03+0000\n"
+"Last-Translator: Luigi Di Naro <luigi.dinaro@ktec.it>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: \n"
+"Language: it\n"
+"X-Generator: Poedit 1.6.9\n"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_nomemagistrato:0
+msgid "Nome Magistrato"
+msgstr "Nome Magistrato"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_cognomemagistrato:0
+msgid "Cognome Magistrato"
+msgstr "Cognome Magistrato"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_tipointercettazione:0
+msgid "Tipo Intercettazione"
+msgstr "Tipo Intercettazione"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_datainizioprestazione:0
+msgid "Data Inizio Prestazione"
+msgstr "Data Inizio Prestazione"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_datafineprestazione:0
+msgid "Data Fine Prestazione"
+msgstr "Data Fine Prestazione"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_sede:0
+msgid "Sede"
+msgstr "Sede"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_ngrg:0
+msgid "NR RG"
+msgstr "NR RG"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_registro:0
+msgid "Registro"
+msgstr "Registro"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_numeromodello37:0
+msgid "Numero Modello 37"
+msgstr "Numero Modello 37"
+
+#. module: l10n_it_siamm
+#: field:account.invoice,siamm_entepagante:0
+msgid "Ente Pagante"
+msgstr "Ente Pagante"
+
+#. module: l10n_it_siamm
+#: view:account.invoice:0
+msgid "Intercettazioni"
+msgstr "Intercettazioni"
+
+#. module: l10n_it_siamm
+#: view:account.invoice:0
+msgid "Numero Decreto"
+msgstr "Numero Decreto"
+
+#. module: l10n_it_siamm
+#: view:account.invoice:0
+msgid "Organo PG"
+msgstr "Organo PG"

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_invoice_siamm_form" model="ir.ui.view">
+            <field name="name">account.invoice.form</field>
+            <field name="model">account.invoice</field>
+            <field name="inherit_id" ref="account.invoice_form"/>
+            <field name="arch" type="xml">
+                <field name="account_id" position="after">
+                    <field name="siamm_intercettazioni"/>
+                </field>
+                <notebook position="inside">
+                    <page string="Intercettazioni" attrs="{'invisible': [('siamm_intercettazioni','=', False)]}">
+                        <group col="4">
+                            <group>
+                                <field name="siamm_nomemagistrato" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_cognomemagistrato" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_tipointercettazione" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_datainizioprestazione" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_datafineprestazione" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_sede" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                            </group>
+                            <group>
+                                <field name="siamm_nrrg" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_registro" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_numeromodello37" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_entepagante" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="inter_decreto" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="inter_organopg" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                            </group>
+                        </group>
+                    </page>
+                </notebook>
+            </field>
+        </record>
+
+    </data>
+</openerp>
