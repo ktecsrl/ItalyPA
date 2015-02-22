@@ -2,7 +2,7 @@
 <openerp>
   <data>
 
-    <record model="workflow.activity" id="act_to_send">
+    <record model="workflow.activity" id="act_to_sign">
       <field name="wkf_id" ref="account.wkf"/>
       <field name="name">to_send</field>
       <field name="action">write({'state':'to_send'})</field>

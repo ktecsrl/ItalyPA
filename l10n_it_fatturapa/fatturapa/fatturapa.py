@@ -22,14 +22,58 @@
 from PyFePA.fepa import *
 from PyFePA.serializer import serializer, ValidateException
 from PyFePA import siamm
-from openerp import models, api, _
-from openerp.exceptions import except_orm
+from openerp import models,fields, api, _
+from openerp.exceptions import except_orm, Warning
 import base64
 import datetime
 
 class OdooFatturaPA(models.Model):
 
     _inherit = 'account.invoice'
+    _name = 'fatturapa.odoofatturapa'
+
+    state = fields.Selection(
+    [
+        ('draft', 'Draft'),
+        ('sign', 'Sign'),
+        ('send_sdi', 'Send SDI'),
+        ('proforma2', 'Pro-forma'),
+        ('open', 'Open'),
+        ('paid', 'Paid'),
+        ('reject', 'Reject')
+        ('cancel', 'Canceled')
+    ], 'State', select=True, readonly=True)
+
+    def pre_validate(self):
+        if self.partner_id.ipa_code:
+            self.signal_workflow('sign_invoice')
+        else:
+            raise Warning(
+                _("Funzione non ancora implementata "))
+
+    def sign_invoice(self):
+        raise Warning(
+            _("Funzione non ancora implementata "))
+
+    def send_sdi(self):
+        raise Warning(
+            _("Funzione non ancora implementata "))
+
+    def accept_sdi(self):
+        raise Warning(
+            _("Funzione non ancora implementata "))
+
+    def unable_to_send_customer(self):
+        raise Warning(
+            _("Funzione non ancora implementata "))
+
+    def accept_from_client(self):
+        raise Warning(
+            _("Funzione non ancora implementata "))
+
+    def reject_from_client(self):
+        raise Warning(
+            _("Funzione non ancora implementata "))
 
     @api.multi
     def invoice_validate(self):
@@ -74,18 +118,23 @@ class OdooFatturaPA(models.Model):
         header = FatturaElettronicaHeader()
         header.DatiTrasmissione = self.trasmissione_from_odoo()
         header.CedentePrestatore = self.cedenteprestatore_from_odoo()
+        header.RappresentanteFiscale = self.rappresentante_fiscale_from_odoo()
         header.CessionarioCommittente = self.cessionariocommittente_from_odoo()
-        #header.TerzoIntermediarioOSoggettoEmittente = self.terzointermediario_from_odoo()
-        #header.SoggettoEmittente = None
+        header.TerzoIntermediarioOSoggettoEmittente = self.terzointermediario_from_odoo()
+        header.SoggettoEmittente = self.sogetto_emittente_fom_odoo()
 
         return header
 
-    def body_from_odoo(self):
+    def body_from_odoo(self, lbody = None):
 
-        lbody = []
+        #Non viene implementato il lotto di fatture per una serie di problemi pratici nella post
+        #gestione. E' possibile comunque implementarlo tramite modulo esterno.
+
+        lbody = lbody if lbody else []
         body = FatturaElettronicaBody()
         body.DatiGenerali = self.datigenerali_from_odoo()
         body.DatiBeniServizi = self.datibeniservizi_from_odoo()
+        body.DatiVeicoli = self.dati_veicoli_from_odoo()
         body.DatiPagamento = self.datipagamento_from_odoo()
         body.Allegati = self.allegati_from_odoo()
         lbody.append(body)
@@ -128,9 +177,10 @@ class OdooFatturaPA(models.Model):
         cp.DatiAnagrafici.IdFiscaleIVA = IdFiscaleIVA()
         cp.DatiAnagrafici.IdFiscaleIVA.IdPaese = company.vat[0:2] if company.vat else None
         cp.DatiAnagrafici.IdFiscaleIVA.IdCodice = company.vat[2:] if company.vat else None
-        #cp.DatiAnagrafici.CodiceFiscale = None
+        cp.DatiAnagrafici.CodiceFiscale = self.partner_id.fiscalcode if self.partner_id.fiscalcode else None
         cp.DatiAnagrafici.Anagrafica = Anagrafica()
         cp.DatiAnagrafici.Anagrafica.Denominazione = company.name if company.name else None
+        #I professionisti non sono gestiti
         #cp.DatiAnagrafici.Anagrafica.Nome = None
         #cp.DatiAnagrafici.Anagrafica.Cognome = None
         #cp.DatiAnagrafici.Anagrafica.Titolo = None
@@ -141,11 +191,13 @@ class OdooFatturaPA(models.Model):
             cp.Sede.Indirizzo = company.street + company.street2
         else:
             cp.Sede.Indirizzo = company.street if company.street else None
+        #Numero civico non gestito da Odoo
         #cp.Sede.NumeroCivico = None
         cp.Sede.CAP = company.zip if company.zip else None
         cp.Sede.Comune = company.city if company.city else None
         cp.Sede.Provincia = company.state_id.code if company.state_id.code else None
         cp.Sede.Nazione = company.country_id.code if company.country_id.code else None
+        #TODO: Controllare e settare solo se nella forma CCNNNNNN
         cp.IscrizioneREA = IscrizioneREA()
         cp.IscrizioneREA.Ufficio = company.company_registry[0:2] if company.company_registry else None
         cp.IscrizioneREA.NumeroREA = company.company_registry[2:] if company.company_registry else None
@@ -159,63 +211,95 @@ class OdooFatturaPA(models.Model):
 
         return cp
 
+    def rappresentante_fiscale_from_odoo(self):
+
+        return None
+
     def cessionariocommittente_from_odoo(self):
 
         cc = CessionarioCommittente()
         cc.DatiAnagrafici = DatiAnagraficiCC()
-        #cc.DatiAnagrafici.IdFiscaleIVA = IdFiscaleIVA()
-        #cc.DatiAnagrafici.IdFiscaleIVA.IdPaese = None
-        #cc.DatiAnagrafici.IdFiscaleIVA.IdCodice = None
+        if self.partner_id.vat:
+            cc.DatiAnagrafici.IdFiscaleIVA = IdFiscaleIVA()
+            cc.DatiAnagrafici.IdFiscaleIVA.IdPaese = self.partner_id.vat[0:2]
+            cc.DatiAnagrafici.IdFiscaleIVA.IdCodice = self.partner_id.vat[2:]
         cc.DatiAnagrafici.CodiceFiscale = self.partner_id.fiscalcode if self.partner_id.fiscalcode else None
         cc.DatiAnagrafici.Anagrafica = Anagrafica()
         cc.DatiAnagrafici.Anagrafica.Denominazione = self.partner_id.name if self.partner_id.name else None
+        #Quando valorizzare questi dati? Amministrazione con nome e cognome?
         #cc.DatiAnagrafici.Anagrafica.Nome = None
         #cc.DatiAnagrafici.Anagrafica.Cognome = None
         #cc.DatiAnagrafici.Anagrafica.Titolo = None
         #cc.DatiAnagrafici.Anagrafica.CodEORI = None
         cc.Sede = Sede()
         cc.Sede.Indirizzo = self.partner_id.street if self.partner_id.street else None
+        #Numero civico non gestito da Odoo
         #cc.Sede.NumeroCivico = None
         cc.Sede.CAP = self.partner_id.zip if self.partner_id.zip else None
         cc.Sede.Comune = self.partner_id.city if self.partner_id.city else None
-        #cc.Sede.Provincia = None
+        cc.Sede.Provincia = self.partner_id.country_id.code if self.partner_id.country_id.code else None
         cc.Sede.Nazione = self.partner_id.country_id.code if self.partner_id.country_id.code else None
 
         return cc
 
     def terzointermediario_from_odoo(self):
 
-        tz = TerzoIntermediarioOSoggettoEmittente()
-        tz.DatiAnagrafici = DatiAnagraficiCC()
-        tz.DatiAnagrafici.IdFiscaleIVA = IdFiscaleIVA()
-        tz.DatiAnagrafici.IdFiscaleIVA.IdPaese = None
-        tz.DatiAnagrafici.IdFiscaleIVA.IdCodice = None
-        tz.DatiAnagrafici.CodiceFiscale = None
-        tz.DatiAnagrafici.Anagrafica = Anagrafica()
-        tz.DatiAnagrafici.Anagrafica.Denominazione = None
-        tz.DatiAnagrafici.Anagrafica.Nome = None
-        tz.DatiAnagrafici.Anagrafica.Cognome = None
-        tz.DatiAnagrafici.Anagrafica.Titolo = None
-        tz.DatiAnagrafici.Anagrafica.CodEORI = None
+        #tz = TerzoIntermediarioOSoggettoEmittente()
+        #tz.DatiAnagrafici = DatiAnagraficiCC()
+        #tz.DatiAnagrafici.IdFiscaleIVA = IdFiscaleIVA()
+        #tz.DatiAnagrafici.IdFiscaleIVA.IdPaese = None
+        #tz.DatiAnagrafici.IdFiscaleIVA.IdCodice = None
+        #tz.DatiAnagrafici.CodiceFiscale = None
+        #tz.DatiAnagrafici.Anagrafica = Anagrafica()
+        #tz.DatiAnagrafici.Anagrafica.Denominazione = None
+        #tz.DatiAnagrafici.Anagrafica.Nome = None
+        #tz.DatiAnagrafici.Anagrafica.Cognome = None
+        #tz.DatiAnagrafici.Anagrafica.Titolo = None
+        #tz.DatiAnagrafici.Anagrafica.CodEORI = None
+        #
+        #return tz
+        #
+        #Creare un modulo che estende il presente per popolare questa sezione
+        #se super torna None istanziare l'oggetto oppure usare quello ritornato
 
-        return tz
+        return None
+
+    def sogetto_emittente_fom_odoo(self):
+
+        return None
 
     def datigenerali_from_odoo(self):
 
         dg = DatiGenerali()
-        dg.DatiGeneraliDocumento = DatiGeneraliDocumento()
-        dg.DatiGeneraliDocumento.TipoDocumento = 'TD01'
-        dg.DatiGeneraliDocumento.Divisa = self.currency_id.name if self.currency_id.name else None
-        dg.DatiGeneraliDocumento.Data = self.date_invoice if self.date_invoice else None
-        dg.DatiGeneraliDocumento.Numero = self.number if self.number else None
-        #dg.DatiGeneraliDocumento.ScontoMaggiorazione = ScontoMaggiorazione()
-        #dg.DatiGeneraliDocumento.ScontoMaggiorazione.Tipo = None
-        #dg.DatiGeneraliDocumento.ScontoMaggiorazione.Percentuale = None
-        #dg.DatiGeneraliDocumento.ScontoMaggiorazione.Importo = None
-        dg.DatiGeneraliDocumento.ImportoTotaleDocumento = self.amount_total if self.amount_total else None
+        dg.DatiGeneraliDocumento = self.dati_generali_documento_from_odoo()
+        dg.DatiOrdineAcquisto = self.dati_ordini_acquisto_from_odoo()
+        dg.DatiContratto = self.dati_contratto_from_odoo()
+        dg.DatiConvenzione = self.dati_convenzione_from_odoo()
+        dg.DatiRicezione = self.dati_ricezione_from_odoo()
+        dg.DatiFattureCollegate = self.dati_fatture_collegate_from_odoo()
+        dg.DatiSAL = self.dati_sal_from_odoo()
+        dg.DatiDDT = self.dati_ddt_from_odoo()
+        dg.DatiTrasporto = self.dati_trasporto_from_odoo()
+        dg.FatturaPrincipale = self.fattura_principale_from_odoo()
+
+        return dg
+
+    def dati_generali_documento_from_odoo(self):
+
+        dgd = DatiGeneraliDocumento()
+        dgd.TipoDocumento = 'TD01'
+        dgd.Divisa = self.currency_id.name if self.currency_id.name else None
+        dgd.Data = self.date_invoice if self.date_invoice else None
+        dgd.Numero = self.number if self.number else None
+        dgd.DatiRitenuta = self.dati_ritenuta_from_odoo()
+        dgd.DatiBollo = self.dati_bollo_from_odoo()
+        dgd.ScontoMaggiorazione = self.sconto_maggiorazione_from_odoo()
+        dgd.DatiCassaPrevidenziale = self.dati_cassa_previdenziale_from_odoo()
+        dgd.ImportoTotaleDocumento = self.amount_total if self.amount_total else None
+        #Arrotontamento non gestito in Odoo
         #dg.DatiGeneraliDocumento.Arrotondamento = None
         if hasattr(self, 'siamm_intercettazioni') and self.siamm_intercettazioni:
-            dg.DatiGeneraliDocumento.Causale = 'PM: {0} {1} - NR-RG: {2} - Servizio dal {3} al {4} - {5}'.format(
+            dgd.Causale = 'PM: {0} {1} - NR-RG: {2} - Servizio dal {3} al {4} - {5}'.format(
                 self.siamm_nomemagistrato,
                 self.siamm_cognomemagistrato,
                 self.siamm_nrrg if self.siamm_nrrg else None,
@@ -224,9 +308,61 @@ class OdooFatturaPA(models.Model):
                 self.comment if self.comment else None
             )
         else:
-            dg.DatiGeneraliDocumento.Causale = self.comment if self.comment else None
+            dgd.Causale = self.comment if self.comment else None
 
-        return dg
+        return dgd
+
+    def dati_ordini_acquisto_from_odoo(self):
+
+        return None
+
+    def dati_contratto_from_odoo(self):
+
+        return None
+
+    def dati_convenzione_from_odoo(self):
+
+        return None
+
+    def dati_ricezione_from_odoo(self):
+
+        return None
+
+    def dati_ritenuta_from_odoo(self):
+
+        return None
+
+    def dati_fatture_collegate_from_odoo(self):
+
+        return None
+
+    def dati_sal_from_odoo(self):
+
+        return None
+
+    def dati_ddt_from_odoo(self):
+
+        return None
+
+    def dati_trasporto_from_odoo(self):
+
+        return None
+
+    def fattura_principale_from_odoo(self):
+
+        return None
+
+    def sconto_maggiorazione_from_odoo(self):
+
+        return None
+
+    def dati_bollo_from_odoo(self):
+
+        return None
+
+    def dati_cassa_previdenziale_from_odoo(self):
+
+        return None
 
     def datibeniservizi_from_odoo(self):
 
@@ -246,7 +382,8 @@ class OdooFatturaPA(models.Model):
                 dtl.CodiceArticolo.CodiceValore = line.product_id.code if line.product_id.code else None
             dtl.Descrizione = line.name
             dtl.Quantita = line.quantity if line.quantity else None
-            dtl.UnitaMisura = line.uos_id.name if line.uos_id.name else None
+            #dtl.UnitaMisura = line.uos_id.name if line.uos_id.name else None
+            dtl.UnitaMisura = 'Giorno(i)'
             dtl.PrezzoUnitario = line.price_unit if line.price_unit else None
 
             if line.discount:
@@ -255,7 +392,10 @@ class OdooFatturaPA(models.Model):
                 dtl.ScontoMaggiorazione.Percentuale = line.discount
 
             dtl.PrezzoTotale = line.price_subtotal if line.product_id else None
-            #To-Do: Tasse multiple sulla stessa linea vedere come risolvere eventuale errore
+            #Tasse multiple sulla stessa linea non supportate dal formato FatturaPA
+            if len(line.invoice_line_tax_id) > 1:
+                raise except_orm(_('Error!'),
+                                 _('Tasse multiple sulla stessa riga non supportate dal formato FatturaPA '))
             dtl.AliquotaIVA = line.invoice_line_tax_id[0].amount*100
             linea_nu += 1
             linee.append(dtl)
@@ -266,7 +406,7 @@ class OdooFatturaPA(models.Model):
         for tl in self.tax_line:
             drt = DatiRiepilogo()
 
-            #To-Do: esiste un modo migliore?
+            #Tasse multiple sulla stessa riga non permesse e controllate prima
             amount = self.env['account.tax'].search([('tax_code_id', '=', tl.tax_code_id.id)])[0].amount
             drt.AliquotaIVA = amount*100
 
@@ -280,6 +420,10 @@ class OdooFatturaPA(models.Model):
         dbs.DatiRiepilogo = dr
 
         return dbs
+
+    def dati_veicoli_from_odoo(self):
+
+        return None
 
     def datipagamento_from_odoo(self):
 
@@ -304,6 +448,7 @@ class OdooFatturaPA(models.Model):
             dp.DettaglioPagamento.ImportoPagamento = self.amount_total if self.amount_total else None
             dp.DettaglioPagamento.IBAN = bank.iban.replace(' ', '') if bank.iban else None
             dp.DettaglioPagamento.BIC = bank.bank_bic if bank.bank_bic else None
+            dp.DettaglioPagamento.DataScadenzaPagamento = self.date_due if self.date_due else None
 
         return dp
 
@@ -315,7 +460,6 @@ class OdooFatturaPA(models.Model):
 
         for f in attachments:
             if f.datas_fname[0:5] == 'FEPA_':
-                print f.datas_fname[0:5]
                 all = Allegati()
                 all.NomeAttachment = f.datas_fname if f.datas_fname else None
                 #all.FormatoAttachment = f.mimetype if f.mimetype else None
