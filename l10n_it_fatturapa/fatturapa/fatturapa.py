@@ -30,7 +30,6 @@ import datetime
 class OdooFatturaPA(models.Model):
 
     _inherit = 'account.invoice'
-    _name = 'fatturapa.odoofatturapa'
 
     state = fields.Selection(
     [
@@ -40,7 +39,7 @@ class OdooFatturaPA(models.Model):
         ('proforma2', 'Pro-forma'),
         ('open', 'Open'),
         ('paid', 'Paid'),
-        ('reject', 'Reject')
+        ('reject', 'Reject'),
         ('cancel', 'Canceled')
     ], 'State', select=True, readonly=True)
 
@@ -78,6 +77,7 @@ class OdooFatturaPA(models.Model):
     @api.multi
     def invoice_validate(self):
 
+
         if self.partner_id.ipa_code:
             try:
                 self.crea_fatturapa()
@@ -87,11 +87,10 @@ class OdooFatturaPA(models.Model):
         #super call
         return super(OdooFatturaPA,self).invoice_validate()
 
+
     @api.multi
     def crea_fatturapa(self):
 
-        if hasattr(self,'siamm_intercettazioni') and self.number and self.siamm_intercettazioni:
-            self.generate_siamm_xml()
 
         fpa = self.fatturapa_from_odoo()
         xmlpa_b64 = base64.encodestring(serializer(fpa,'xml'))
@@ -154,7 +153,8 @@ class OdooFatturaPA(models.Model):
 
         dt.IdTrasmittente.IdPaese = company.vat[0:2] if company.vat else None
         dt.IdTrasmittente.IdCodice = company.vat[2:] if company.vat else None
-        dt.ProgressivoInvio = 123456
+        sequence_obj = self.pool['ir.sequence']
+        dt.ProgressivoInvio = sequence_obj.next_by_code(self.env.cr, self.env.uid, 'account.fatturapa.idinvio')
         dt.CodiceDestinatario = self.partner_id.ipa_code if self.partner_id.ipa_code else None
 
         if company.phone or company.email:
@@ -177,7 +177,7 @@ class OdooFatturaPA(models.Model):
         cp.DatiAnagrafici.IdFiscaleIVA = IdFiscaleIVA()
         cp.DatiAnagrafici.IdFiscaleIVA.IdPaese = company.vat[0:2] if company.vat else None
         cp.DatiAnagrafici.IdFiscaleIVA.IdCodice = company.vat[2:] if company.vat else None
-        cp.DatiAnagrafici.CodiceFiscale = self.partner_id.fiscalcode if self.partner_id.fiscalcode else None
+        cp.DatiAnagrafici.CodiceFiscale = company.partner_id.fiscalcode if company.partner_id.fiscalcode else None
         cp.DatiAnagrafici.Anagrafica = Anagrafica()
         cp.DatiAnagrafici.Anagrafica.Denominazione = company.name if company.name else None
         #I professionisti non sono gestiti
@@ -298,17 +298,18 @@ class OdooFatturaPA(models.Model):
         dgd.ImportoTotaleDocumento = self.amount_total if self.amount_total else None
         #Arrotontamento non gestito in Odoo
         #dg.DatiGeneraliDocumento.Arrotondamento = None
+        if self.comment:
+            dgd.Causale = dgd.Causale.append(self.comment) if dgd.Causale else [self.comment]
         if hasattr(self, 'siamm_intercettazioni') and self.siamm_intercettazioni:
-            dgd.Causale = 'PM: {0} {1} - NR-RG: {2} - Servizio dal {3} al {4} - {5}'.format(
+            siamm_causale = 'PM: {0} {1} - NR-RG: {2} - Modello37 n.ro : {3} - Servizio dal {4} al {5}'.format(
                 self.siamm_nomemagistrato,
                 self.siamm_cognomemagistrato,
                 self.siamm_nrrg if self.siamm_nrrg else None,
+                self.siamm_numeromodello37,
                 self.siamm_datainizioprestazione,
-                self.siamm_datafineprestazione,
-                self.comment if self.comment else None
+                self.siamm_datafineprestazione
             )
-        else:
-            dgd.Causale = self.comment if self.comment else None
+            dgd.Causale = dgd.Causale.append(siamm_causale) if dgd.Causale else [siamm_causale]
 
         return dgd
 

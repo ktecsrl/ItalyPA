@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<openerp>
+    <data noupdate="1">
+        <record model="ir.sequence.type" id="seq_type_invio_fatturapa">
+            <field name="name">Identificativo Invio FatturaPA</field>
+            <field name="code">account.fatturapa.idinvio</field>
+        </record>
+        <record model="ir.sequence" id="seq_invio_fatturapa">
+            <field name="name">ID Trasmittente</field>
+            <field name="code">account.fatturapa.idinvio</field>
+            <field eval="5" name="padding"/>
+            <filed name="implementation">no_gap</filed>
+        </record>
+    </data>
+</openerp>
