@@ -77,7 +77,6 @@ class OdooFatturaPA(models.Model):
     @api.multi
     def invoice_validate(self):
 
-
         if self.partner_id.ipa_code:
             try:
                 self.crea_fatturapa()
@@ -237,7 +236,7 @@ class OdooFatturaPA(models.Model):
         #cc.Sede.NumeroCivico = None
         cc.Sede.CAP = self.partner_id.zip if self.partner_id.zip else None
         cc.Sede.Comune = self.partner_id.city if self.partner_id.city else None
-        cc.Sede.Provincia = self.partner_id.country_id.code if self.partner_id.country_id.code else None
+        cc.Sede.Provincia = self.partner_id.state_id.code if self.partner_id.state_id.code else None
         cc.Sede.Nazione = self.partner_id.country_id.code if self.partner_id.country_id.code else None
 
         return cc
@@ -383,8 +382,8 @@ class OdooFatturaPA(models.Model):
                 dtl.CodiceArticolo.CodiceValore = line.product_id.code if line.product_id.code else None
             dtl.Descrizione = line.name
             dtl.Quantita = line.quantity if line.quantity else None
-            #dtl.UnitaMisura = line.uos_id.name if line.uos_id.name else None
-            dtl.UnitaMisura = 'Giorno(i)'
+            tuos = line.uos_id.with_context({}, lang=self.partner_id.lang)
+            dtl.UnitaMisura = tuos.name if tuos.name else None
             dtl.PrezzoUnitario = line.price_unit if line.price_unit else None
 
             if line.discount:
