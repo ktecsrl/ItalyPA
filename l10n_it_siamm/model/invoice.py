@@ -103,6 +103,9 @@ class account_invoice(models.Model):
     inter_decreto = fields.Char(
         string='Numero Decreto'
     )
+    inter_nrvg = fields.Char(
+        string='NR VG'
+    )
     inter_organopg = fields.Many2one('res.partner',
         string='Organo PG',
     )

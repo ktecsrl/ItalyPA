@@ -23,6 +23,7 @@
                             </group>
                             <group>
                                 <field name="siamm_nrrg" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="inter_nrvg" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
                                 <field name="siamm_registro" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
                                 <field name="siamm_numeromodello37" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
                                 <field name="siamm_entepagante" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>

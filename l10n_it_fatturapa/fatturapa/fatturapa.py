@@ -300,14 +300,17 @@ class OdooFatturaPA(models.Model):
         if self.comment:
             dgd.Causale = dgd.Causale.append(self.comment) if dgd.Causale else [self.comment]
         if hasattr(self, 'siamm_intercettazioni') and self.siamm_intercettazioni:
-            siamm_causale = 'PM: {0} {1} - NR-RG: {2} - Modello37 n.ro : {3} - Servizio dal {4} al {5}'.format(
-                self.siamm_nomemagistrato,
-                self.siamm_cognomemagistrato,
-                self.siamm_nrrg if self.siamm_nrrg else None,
-                self.siamm_numeromodello37,
-                self.siamm_datainizioprestazione,
-                self.siamm_datafineprestazione
-            )
+            siamm_causale = ''
+            if self.siamm_nomemagistrato:
+                siamm_causale += 'PM: {0} {1} - '.format(self.siamm_nomemagistrato, self.siamm_cognomemagistrato)
+            if self.siamm_nrrg:
+                siamm_causale += 'N.R.R.G.: {} - '.format(self.siamm_nrrg)
+            if self.inter_nrvg:
+                siamm_causale += 'N.R.V.G.: {} - '.format(self.inter_nrvg)
+            if self.siamm_numeromodello37:
+                siamm_causale += 'Modello37 n.ro : {} - '.format(self.siamm_numeromodello37)
+            siamm_causale += 'Servizio dal {0} al {1}'.format(self.siamm_datainizioprestazione,
+                                                           self.siamm_datafineprestazione)
             dgd.Causale = dgd.Causale.append(siamm_causale) if dgd.Causale else [siamm_causale]
 
         return dgd
@@ -445,7 +448,7 @@ class OdooFatturaPA(models.Model):
             dp.CondizioniPagamento = 'TP02'
             dp.DettaglioPagamento = DettaglioPagamento()
             dp.DettaglioPagamento.ModalitaPagamento = 'MP05'
-            dp.DettaglioPagamento.ImportoPagamento = self.amount_total if self.amount_total else None
+            dp.DettaglioPagamento.ImportoPagamento = self.amount_untaxed if self.amount_untaxed else None
             dp.DettaglioPagamento.IBAN = bank.iban.replace(' ', '') if bank.iban else None
             dp.DettaglioPagamento.BIC = bank.bank_bic if bank.bank_bic else None
             dp.DettaglioPagamento.DataScadenzaPagamento = self.date_due if self.date_due else None
