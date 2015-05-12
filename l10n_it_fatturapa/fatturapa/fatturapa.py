@@ -309,9 +309,11 @@ class OdooFatturaPA(models.Model):
                 siamm_causale += 'N.R.V.G.: {} - '.format(self.inter_nrvg)
             if self.siamm_numeromodello37:
                 siamm_causale += 'Modello37 n.ro : {} - '.format(self.siamm_numeromodello37)
-            siamm_causale += 'Servizio dal {0} al {1}'.format(self.siamm_datainizioprestazione,
-                                                           self.siamm_datafineprestazione)
-            dgd.Causale = dgd.Causale.append(siamm_causale) if dgd.Causale else [siamm_causale]
+            if self.siamm_datainizioprestazione and self.siamm_datafineprestazione:
+                siamm_causale += 'Servizio dal {0} al {1}'.format(self.siamm_datainizioprestazione,
+                                                                  self.siamm_datafineprestazione)
+            if siamm_causale:
+                dgd.Causale = dgd.Causale.append(siamm_causale) if dgd.Causale else [siamm_causale]
 
         return dgd
 
@@ -416,8 +418,9 @@ class OdooFatturaPA(models.Model):
             drt.ImponibileImporto = tl.base if tl.base else None
             drt.Imposta = tl.amount if tl.amount else None
             #To-Do: sistemare esigibilita iva
-            drt.EsigibilitaIVA = 'S'
-            drt.RiferimentoNormativo = 'Scissione nei pagamenti, IVA versata dal committente art 17 ter  D.P.R. n.633/ 72'
+            if self.fiscal_position and self.fiscal_position.split_payment:
+                drt.EsigibilitaIVA = 'S'
+                drt.RiferimentoNormativo = 'Scissione nei pagamenti, IVA versata dal committente art 17 ter  D.P.R. n.633/ 72'
             dr.append(drt)
 
         dbs.DatiRiepilogo = dr
@@ -448,7 +451,10 @@ class OdooFatturaPA(models.Model):
             dp.CondizioniPagamento = 'TP02'
             dp.DettaglioPagamento = DettaglioPagamento()
             dp.DettaglioPagamento.ModalitaPagamento = 'MP05'
-            dp.DettaglioPagamento.ImportoPagamento = self.amount_untaxed if self.amount_untaxed else None
+            if self.fiscal_position and self.fiscal_position.untax_pay:
+                dp.DettaglioPagamento.ImportoPagamento = self.amount_untaxed if self.amount_untaxed else None
+            else:
+               dp.DettaglioPagamento.ImportoPagamento = self.amount_total if self.amount_total else None
             dp.DettaglioPagamento.IBAN = bank.iban.replace(' ', '') if bank.iban else None
             dp.DettaglioPagamento.BIC = bank.bank_bic if bank.bank_bic else None
             dp.DettaglioPagamento.DataScadenzaPagamento = self.date_due if self.date_due else None
