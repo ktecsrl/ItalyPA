@@ -314,6 +314,9 @@ class OdooFatturaPA(models.Model):
                                                                   self.siamm_datafineprestazione)
             if siamm_causale:
                 dgd.Causale = dgd.Causale.append(siamm_causale) if dgd.Causale else [siamm_causale]
+        if self.origin:
+            dgd.Causale = dgd.Causale.append('Documento di Origine: '+self.origin) if dgd.Causale \
+                else ['Documento di Origine: '+self.origin]
 
         return dgd
 

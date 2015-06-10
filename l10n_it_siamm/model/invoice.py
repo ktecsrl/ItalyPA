@@ -74,7 +74,7 @@ class account_invoice(models.Model):
         string='Ente Pagante', default='F'
     )
     siamm_numeromodello37 = fields.Char(
-        string='Numero Modello 37', size=11
+        string='Decreto/Modello 37', size=11
     )
     siamm_registro = fields.Selection(RG,
         string='Mod. Registro'
@@ -101,7 +101,7 @@ class account_invoice(models.Model):
         string='Tipo Intercettazione'
     )
     inter_decreto = fields.Char(
-        string='Numero Decreto'
+        string='Altro'
     )
     inter_nrvg = fields.Char(
         string='NR VG'
