@@ -29,10 +29,6 @@ from openerp import fields
 class sp_fiscal_position(models.Model):
     _inherit = 'account.fiscal.position'
 
-    split_payment = fields.Boolean(
-        string='Use Split Payment'
-    )
-
     untax_pay = fields.Boolean(
         string='Use Untax on net to pay'
     )

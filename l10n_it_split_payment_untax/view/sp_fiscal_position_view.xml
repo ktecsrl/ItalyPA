@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_sp_account_position_form_untax" model="ir.ui.view">
+            <field name="name">l10n_it_split_payment.account_fiscal_position_form_sp</field>
+            <field name="model">account.fiscal.position</field>
+            <field name="inherit_id" ref="l10n_it_split_payment.account_fiscal_position_form_sp"/>
+            <field name="arch" type="xml">
+                <field name="split_payment" position="after">
+                    <field name="untax_pay"/>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>

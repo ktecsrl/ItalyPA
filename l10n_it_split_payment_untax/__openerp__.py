@@ -22,24 +22,23 @@
 #
 ##############################################################################
 {
-    'name': 'Split Payment (Italian Split Payment)',
-    'version': '0.2 Alpha',
+    'name': 'Split Payment Untax',
+    'version': '8.0.1.0',
     'category': 'Localisation/Italy',
     'description': """
 Italian Localisation module - Split Payment
 ============================================
 
-This module aim to manage italian split payment on vat
+This module extend l10n_it_split_payment
 
 Funcionalities
 --------------
-    * TAG fiscal position for Split Payment
     * TAG fiscal position for use only untax amount on net to pay
 """,
     'author': 'KTec S.r.l.',
     'website': 'http://www.ktec.it',
     'license': 'AGPL-3',
-    "depends": ['account'],
+    "depends": ['l10n_it_split_payment'],
     "data": [
         'view/sp_fiscal_position_view.xml',
     ],
