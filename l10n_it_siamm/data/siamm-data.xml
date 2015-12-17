@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<openerp>
+    <data noupdate="1">
+        <record model="ir.sequence.type" id="seq_type_siamm">
+            <field name="name">Identificativo SIAMM</field>
+            <field name="code">account.siamm.idsiamm</field>
+        </record>
+        <record model="ir.sequence" id="seq_siamm">
+            <field name="name">ID File SIAMM</field>
+            <field name="code">account.siamm.idsiamm</field>
+            <field eval="5" name="padding"/>
+            <filed name="implementation">no_gap</filed>
+        </record>
+    </data>
+</openerp>

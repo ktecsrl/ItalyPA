@@ -38,10 +38,12 @@ Funcionalities
     'author': 'KTec S.r.l.',
     'website': 'http://www.ktec.it',
     'license': 'AGPL-3',
-    "depends": ['account'],
+    "depends": ['l10n_it_fatturapa'],
     "data": [
         'view/invoice_view.xml',
-        'wizard/generate_siammxml_view.xml'
+        'wizard/generate_siammxml_view.xml',
+        'data/l10n_it_siamm.siamm_sedi.csv',
+        'data/siamm-data.xml'
     ],
     "qweb": [],
     "demo": [],

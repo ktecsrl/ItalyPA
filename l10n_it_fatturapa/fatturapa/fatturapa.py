@@ -77,7 +77,7 @@ class OdooFatturaPA(models.Model):
     @api.multi
     def invoice_validate(self):
 
-        if self.partner_id.ipa_code:
+        if self.partner_id.ipa_code and (self.type == 'out_invoice' or self.type == 'out_refund'):
             try:
                 self.crea_fatturapa()
             except (ValidateException, ValueError) as ve:
@@ -86,10 +86,8 @@ class OdooFatturaPA(models.Model):
         #super call
         return super(OdooFatturaPA,self).invoice_validate()
 
-
     @api.multi
     def crea_fatturapa(self):
-
 
         fpa = self.fatturapa_from_odoo()
         xmlpa_b64 = base64.encodestring(serializer(fpa,'xml'))
@@ -286,7 +284,10 @@ class OdooFatturaPA(models.Model):
     def dati_generali_documento_from_odoo(self):
 
         dgd = DatiGeneraliDocumento()
-        dgd.TipoDocumento = 'TD01'
+        if self.type == 'out_invoice':
+            dgd.TipoDocumento = 'TD01'
+        elif self.type == 'out_refund':
+            dgd.TipoDocumento = 'TD04'
         dgd.Divisa = self.currency_id.name if self.currency_id.name else None
         dgd.Data = self.date_invoice if self.date_invoice else None
         dgd.Numero = self.number if self.number else None
@@ -299,21 +300,6 @@ class OdooFatturaPA(models.Model):
         #dg.DatiGeneraliDocumento.Arrotondamento = None
         if self.comment:
             dgd.Causale = dgd.Causale.append(self.comment) if dgd.Causale else [self.comment]
-        if hasattr(self, 'siamm_intercettazioni') and self.siamm_intercettazioni:
-            siamm_causale = ''
-            if self.siamm_nomemagistrato:
-                siamm_causale += 'PM: {0} {1} - '.format(self.siamm_nomemagistrato, self.siamm_cognomemagistrato)
-            if self.siamm_nrrg:
-                siamm_causale += 'N.R.R.G.: {} - '.format(self.siamm_nrrg)
-            if self.inter_nrvg:
-                siamm_causale += 'N.R.V.G.: {} - '.format(self.inter_nrvg)
-            if self.siamm_numeromodello37:
-                siamm_causale += 'Modello37 n.ro : {} - '.format(self.siamm_numeromodello37)
-            if self.siamm_datainizioprestazione and self.siamm_datafineprestazione:
-                siamm_causale += 'Servizio dal {0} al {1}'.format(self.siamm_datainizioprestazione,
-                                                                  self.siamm_datafineprestazione)
-            if siamm_causale:
-                dgd.Causale = dgd.Causale.append(siamm_causale) if dgd.Causale else [siamm_causale]
         if self.origin:
             dgd.Causale = dgd.Causale.append('Documento di Origine: '+self.origin) if dgd.Causale \
                 else ['Documento di Origine: '+self.origin]
@@ -342,7 +328,10 @@ class OdooFatturaPA(models.Model):
 
     def dati_fatture_collegate_from_odoo(self):
 
-        return None
+        dfc = None
+        if self.type == 'out_refund':
+            dfc = DatiFattureCollegate()
+            dfc.IdDocumento = self.origin
 
     def dati_sal_from_odoo(self):
 
@@ -377,58 +366,63 @@ class OdooFatturaPA(models.Model):
         dbs = DatiBeniServizi()
 
         linee = []
-
         linea_nu = 1
-
         for line in self.invoice_line:
-
-            dtl = DettaglioLinee()
-            dtl.NumeroLinea = linea_nu
-            if line.product_id.code:
-                dtl.CodiceArticolo = CodiceArticolo()
-                dtl.CodiceArticolo.CodiceTipo = 'INTERNO'
-                dtl.CodiceArticolo.CodiceValore = line.product_id.code if line.product_id.code else None
-            dtl.Descrizione = line.name
-            dtl.Quantita = line.quantity if line.quantity else None
-            tuos = line.uos_id.with_context({}, lang=self.partner_id.lang)
-            dtl.UnitaMisura = tuos.name if tuos.name else None
-            dtl.PrezzoUnitario = line.price_unit if line.price_unit else None
-
-            if line.discount:
-                dtl.ScontoMaggiorazione = ScontoMaggiorazione()
-                dtl.ScontoMaggiorazione.Tipo = 'SC'
-                dtl.ScontoMaggiorazione.Percentuale = line.discount
-
-            dtl.PrezzoTotale = line.price_subtotal if line.product_id else None
-            #Tasse multiple sulla stessa linea non supportate dal formato FatturaPA
-            if len(line.invoice_line_tax_id) > 1:
-                raise except_orm(_('Error!'),
-                                 _('Tasse multiple sulla stessa riga non supportate dal formato FatturaPA '))
-            dtl.AliquotaIVA = line.invoice_line_tax_id[0].amount*100
             linea_nu += 1
-            linee.append(dtl)
-
+            linee.append(self.dettaglio_linee_from_odoo(line,linea_nu))
         dbs.DettaglioLinee = linee
 
         dr = []
         for tl in self.tax_line:
-            drt = DatiRiepilogo()
-
-            #Tasse multiple sulla stessa riga non permesse e controllate prima
-            amount = self.env['account.tax'].search([('tax_code_id', '=', tl.tax_code_id.id)])[0].amount
-            drt.AliquotaIVA = amount*100
-
-            drt.ImponibileImporto = tl.base if tl.base else None
-            drt.Imposta = tl.amount if tl.amount else None
-            #To-Do: sistemare esigibilita iva
-            if self.fiscal_position and self.fiscal_position.split_payment:
-                drt.EsigibilitaIVA = 'S'
-                drt.RiferimentoNormativo = 'Scissione nei pagamenti, IVA versata dal committente art 17 ter  D.P.R. n.633/ 72'
-            dr.append(drt)
-
+            dr.append(self.dati_riepilogo_from_odoo(tl))
         dbs.DatiRiepilogo = dr
 
         return dbs
+
+    def dettaglio_linee_from_odoo(self, line, numero):
+
+        dtl = DettaglioLinee()
+        dtl.NumeroLinea = numero
+        if line.product_id.code:
+            dtl.CodiceArticolo = CodiceArticolo()
+            dtl.CodiceArticolo.CodiceTipo = 'INTERNO'
+            dtl.CodiceArticolo.CodiceValore = line.product_id.code if line.product_id.code else None
+        dtl.Descrizione = line.name
+        dtl.Quantita = line.quantity if line.quantity else None
+        tuos = line.uos_id.with_context({}, lang=self.partner_id.lang)
+        dtl.UnitaMisura = tuos.name if tuos.name else None
+        dtl.PrezzoUnitario = line.price_unit if line.price_unit else None
+
+        if line.discount:
+            dtl.ScontoMaggiorazione = ScontoMaggiorazione()
+            dtl.ScontoMaggiorazione.Tipo = 'SC'
+            dtl.ScontoMaggiorazione.Percentuale = line.discount
+
+        dtl.PrezzoTotale = line.price_subtotal if line.product_id else None
+        #Tasse multiple sulla stessa linea non supportate dal formato FatturaPA
+        if len(line.invoice_line_tax_id) > 1:
+            raise except_orm(_('Error!'),
+                             _('Tasse multiple sulla stessa riga non supportate dal formato FatturaPA '))
+        dtl.AliquotaIVA = line.invoice_line_tax_id[0].amount*100
+
+        return dtl
+
+    def dati_riepilogo_from_odoo(self,tax_line):
+
+        drt = DatiRiepilogo()
+
+        #Tasse multiple sulla stessa riga non permesse e controllate prima
+        amount = self.env['account.tax'].search([('tax_code_id', '=', tax_line.tax_code_id.id)])[0].amount
+        drt.AliquotaIVA = amount*100
+
+        drt.ImponibileImporto = tax_line.base if tax_line.base else None
+        drt.Imposta = tax_line.amount if tax_line.amount else None
+        #To-Do: sistemare esigibilita iva
+        if self.fiscal_position and self.fiscal_position.split_payment:
+            drt.EsigibilitaIVA = 'S'
+            drt.RiferimentoNormativo = 'Scissione nei pagamenti, IVA versata dal committente art 17 ter  D.P.R. n.633/ 72'
+
+        return drt
 
     def dati_veicoli_from_odoo(self):
 
@@ -483,53 +477,3 @@ class OdooFatturaPA(models.Model):
             return allegati
         else:
             return None
-
-    @api.one
-    def generate_siamm_xml(self):
-
-        if not hasattr(self,'siamm_intercettazioni') or not self.number or not self.siamm_intercettazioni:
-            raise except_orm(_('Error!'),
-                             _('File SIAMM generabile solo su fatture intercettazioni confermate'))
-
-        company = self.company_id
-
-        if not company:
-            user_obj = self.pool['res.users']
-            company = user_obj.company_id
-
-        siamm_data = {'beneficiario': company.vat,
-                      'tipopagamento': 'AC',
-                      'id': 1,
-                      'entepagante': self.siamm_entepagante if self.siamm_entepagante else None,
-                      'numerofattura': self.number,
-                      'registro': self.siamm_registro if self.siamm_registro else '',
-                      'datafattura': datetime.datetime.strptime(self.date_invoice, '%Y-%m-%d'),
-                      'importototale': self.amount_untaxed,
-                      'importoiva': self.amount_tax,
-                      'nr_rg': self.siamm_nrrg if self.siamm_registro else '',
-                      'sede': self.siamm_sede if self.siamm_sede else '',
-                      'numeromodello37': self.siamm_numeromodello37 if self.siamm_numeromodello37 else '',
-                      'datainizioprestazione': datetime.datetime.strptime(self.siamm_datainizioprestazione,
-                                                                          '%Y-%m-%d') if self.siamm_datainizioprestazione else '',
-                      'datafineprestazione': datetime.datetime.strptime(self.siamm_datafineprestazione,
-                                                                        '%Y-%m-%d') if self.siamm_datafineprestazione else '',
-                      'nomemagistrato': self.siamm_cognomemagistrato if self.siamm_cognomemagistrato else None,
-                      'cognomemagistrato': self.siamm_nomemagistrato if self.siamm_nomemagistrato else None,
-                      'tipointercettazione': self.siamm_tipointercettazione if self.siamm_tipointercettazione else None}
-
-        filename = 'FEPA_SIAMM_' + self.number.replace('/','-')+ '.xml'
-
-
-        try:
-            datas = base64.encodestring(siamm.serialize(siamm_data))
-        except ValueError as ve:
-            raise except_orm(_('Error!'),
-                             _('Errore nella validazione: ' + str(ve)))
-
-        attachment = self.env['ir.attachment'].create({'name': filename,
-                                                       'datas_fname': filename,
-                                                       'datas': datas,
-                                                       'mimetype': 'application/xml',
-                                                       'res_model': 'account.invoice',
-                                                       'res_id': self.id
-                                                       })

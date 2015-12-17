@@ -20,6 +20,7 @@
                                 <field name="siamm_datafineprestazione" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
                                 <field name="siamm_nrrg" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
                                 <field name="siamm_registro" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
+                                <field name="siamm_dataemissioneprovv" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>
                             </group>
                             <group>
                                 <field name="siamm_tipointercettazione" attrs="{'readonly': [('state', 'not in', ('draft'))]}"/>

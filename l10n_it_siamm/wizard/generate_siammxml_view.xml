@@ -12,10 +12,12 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Crea SIAMM XML">
-                    <group>
-                        <button string="Cancel" special="cancel" icon="gtk-cancel" colspan="2"/>
-                        <button string="Crea" name="generate_xml" type="object" icon="gtk-ok" colspan="2"/>
-                    </group>
+                    <footer>
+                        <button name="generate_xml" string="Crea" type="object" class="oe_highlight"/>
+                        o
+                        <button string="Cancella" class="oe_link" special="cancel"/>
+                    </footer>
+
                 </form>
             </field>
         </record>
